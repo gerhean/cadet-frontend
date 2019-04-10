@@ -1,44 +1,50 @@
-import { Button, Intent, MenuItem, Popover, Text, Tooltip } from '@blueprintjs/core'
-import { IconNames } from '@blueprintjs/icons'
-import { ItemRenderer, Select } from '@blueprintjs/select'
-import * as React from 'react'
-import * as CopyToClipboard from 'react-copy-to-clipboard'
+import { Button, Intent, MenuItem, Popover, Text, Tooltip } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
+import { ItemRenderer, Select } from '@blueprintjs/select';
+import * as React from 'react';
+import * as CopyToClipboard from 'react-copy-to-clipboard';
 
-import { externalLibraries } from '../../reducers/externalLibraries'
-import { sourceChapters } from '../../reducers/states'
-import { ExternalLibraryName } from '../assessment/assessmentShape'
-import { controlButton } from '../commons'
+import { externalLibraries } from '../../reducers/externalLibraries';
+import { sourceChapters } from '../../reducers/states';
+import { ExternalLibraryName } from '../assessment/assessmentShape';
+import { controlButton } from '../commons';
 
 /**
  * @prop questionProgress a tuple of (current question number, question length) where
  *   the current question number is 1-based.
  */
 export type ControlBarProps = {
-  queryString?: string
-  questionProgress: [number, number] | null
-  sourceChapter: number
-  externalLibraryName?: string
-  handleChapterSelect?: (i: IChapter, e: React.ChangeEvent<HTMLSelectElement>) => void
-  handleEditorEval: () => void
-  handleExternalSelect?: (i: IExternal, e: React.ChangeEvent<HTMLSelectElement>) => void
-  handleGenerateLz?: () => void
-  handleInterruptEval: () => void
-  handleReplEval: () => void
-  handleReplOutputClear: () => void
-  hasChapterSelect: boolean
-  hasSaveButton: boolean
-  hasShareButton: boolean
-  hasUnsavedChanges?: boolean
-  isRunning: boolean
-  onClickNext?(): any
-  onClickPrevious?(): any
-  onClickReturn?(): any
-  onClickSave?(): any
-}
+  queryString?: string;
+  questionProgress: [number, number] | null;
+  sourceChapter: number;
+  externalLibraryName?: string;
+  handleChapterSelect?: (i: IChapter, e: React.ChangeEvent<HTMLSelectElement>) => void;
+  handleEditorEval: () => void;
+  handleExternalSelect?: (i: IExternal, e: React.ChangeEvent<HTMLSelectElement>) => void;
+  handleGenerateLz?: () => void;
+  handleInterruptEval: () => void;
+  handleReplEval: () => void;
+  handleReplOutputClear: () => void;
+  handleToggleEditorAutorun?: () => void;
+  hasChapterSelect: boolean;
+  hasEditorAutorunButton: boolean;
+  hasSaveButton: boolean;
+  hasShareButton: boolean;
+  hasUnsavedChanges?: boolean;
+  isEditorAutorun?: boolean;
+  isRunning: boolean;
+  editingMode?: string;
+  onClickNext?(): any;
+  onClickPrevious?(): any;
+  onClickReturn?(): any;
+  onClickSave?(): any;
+  onClickReset?(): any;
+  toggleEditMode?(): void;
+};
 
 interface IChapter {
-  chapter: number
-  displayName: string
+  chapter: number;
+  displayName: string;
 }
 
 /**
@@ -47,9 +53,9 @@ interface IChapter {
  *   the definition of a Library in an assessment.
  */
 interface IExternal {
-  key: number
-  name: ExternalLibraryName
-  symbols: string[]
+  key: number;
+  name: ExternalLibraryName;
+  symbols: string[];
 }
 
 class ControlBar extends React.PureComponent<ControlBarProps, {}> {
@@ -59,14 +65,15 @@ class ControlBar extends React.PureComponent<ControlBarProps, {}> {
     hasShareButton: true,
     onClickNext: () => {},
     onClickPrevious: () => {},
-    onClickSave: () => {}
-  }
+    onClickSave: () => {},
+    onClickReset: () => {}
+  };
 
-  private shareInputElem: HTMLInputElement
+  private shareInputElem: HTMLInputElement;
 
   constructor(props: ControlBarProps) {
-    super(props)
-    this.selectShareInputText = this.selectShareInputText.bind(this)
+    super(props);
+    this.selectShareInputText = this.selectShareInputText.bind(this);
   }
 
   public render() {
@@ -76,7 +83,7 @@ class ControlBar extends React.PureComponent<ControlBarProps, {}> {
         {this.flowControl()}
         {this.replControl()}
       </div>
-    )
+    );
   }
 
   private editorControl() {
@@ -84,17 +91,17 @@ class ControlBar extends React.PureComponent<ControlBarProps, {}> {
       <Tooltip content="...or press shift-enter in the editor">
         {controlButton('Run', IconNames.PLAY, this.props.handleEditorEval)}
       </Tooltip>
-    )
-    const stopButton = controlButton('Stop', IconNames.STOP, this.props.handleInterruptEval)
+    );
+    const stopButton = controlButton('Stop', IconNames.STOP, this.props.handleInterruptEval);
     const saveButtonOpts = this.props.hasUnsavedChanges
       ? { intent: Intent.WARNING, minimal: false }
-      : {}
+      : {};
     const saveButton = this.props.hasSaveButton
       ? controlButton('Save', IconNames.FLOPPY_DISK, this.props.onClickSave, saveButtonOpts)
-      : undefined
+      : undefined;
     const shareUrl = `${window.location.protocol}//${window.location.hostname}/playground#${
       this.props.queryString
-    }`
+    }`;
     const shareButton = this.props.hasShareButton ? (
       <Popover popoverClassName="Popover-share" inheritDarkTheme={false}>
         {controlButton('Share', IconNames.SHARE, this.props.handleGenerateLz)}
@@ -119,20 +126,33 @@ class ControlBar extends React.PureComponent<ControlBarProps, {}> {
       </Popover>
     ) : (
       undefined
-    )
+    );
     const chapterSelectButton = this.props.hasChapterSelect
       ? chapterSelect(this.props.sourceChapter, this.props.handleChapterSelect)
-      : undefined
+      : undefined;
     const externalSelectButton =
       this.props.hasChapterSelect && this.props.externalLibraryName !== undefined
         ? externalSelect(this.props.externalLibraryName, this.props.handleExternalSelect!)
-        : undefined
+        : undefined;
+    const startAutorunButton = this.props.hasEditorAutorunButton
+      ? controlButton('Autorun', IconNames.PLAY, this.props.handleToggleEditorAutorun)
+      : undefined;
+    const stopAutorunButton = this.props.hasEditorAutorunButton
+      ? controlButton('Autorun', IconNames.STOP, this.props.handleToggleEditorAutorun)
+      : undefined;
+    const resetButton =
+      this.props.onClickReset !== null
+        ? controlButton('Reset', IconNames.REPEAT, this.props.onClickReset)
+        : undefined;
     return (
       <div className="ControlBar_editor pt-button-group">
-        {this.props.isRunning ? stopButton : runButton} {saveButton}
+        {this.props.isEditorAutorun ? undefined : this.props.isRunning ? stopButton : runButton}
+        {saveButton}
         {shareButton} {chapterSelectButton} {externalSelectButton}
+        {this.props.isEditorAutorun ? stopAutorunButton : startAutorunButton}
+        {resetButton}
       </div>
-    )
+    );
   }
 
   private flowControl() {
@@ -144,68 +164,87 @@ class ControlBar extends React.PureComponent<ControlBarProps, {}> {
           {},
           true
         )
-      : undefined
+      : undefined;
     const previousButton = this.hasPreviousButton()
       ? controlButton('Previous', IconNames.ARROW_LEFT, this.props.onClickPrevious)
-      : undefined
+      : undefined;
     const nextButton = this.hasNextButton()
       ? controlButton('Next', IconNames.ARROW_RIGHT, this.props.onClickNext, { iconOnRight: true })
-      : undefined
+      : undefined;
     const returnButton = this.hasReturnButton()
       ? controlButton('Return to Academy', IconNames.ARROW_RIGHT, this.props.onClickReturn, {
           iconOnRight: true
         })
-      : undefined
+      : undefined;
 
     return (
       <div className="ControlBar_flow pt-button-group">
         {previousButton} {questionView} {nextButton} {returnButton}
       </div>
-    )
+    );
   }
 
   private replControl() {
+    const toggleEditModeButton =
+      this.props.toggleEditMode !== null ? (
+        <Tooltip
+          content={
+            'Switch to ' +
+            (this.props.editingMode === 'question' ? 'global' : 'question specific') +
+            ' editing mode.'
+          }
+        >
+          {controlButton(
+            this.props.editingMode + ' editing mode',
+            IconNames.REFRESH,
+            this.props.toggleEditMode
+          )}
+        </Tooltip>
+      ) : (
+        undefined
+      );
     const evalButton = (
       <Tooltip content="...or press shift-enter in the REPL">
         {controlButton('Eval', IconNames.CODE, this.props.handleReplEval)}
       </Tooltip>
-    )
-    const clearButton = controlButton('Clear', IconNames.REMOVE, this.props.handleReplOutputClear)
+    );
+    const clearButton = controlButton('Clear', IconNames.REMOVE, this.props.handleReplOutputClear);
+
     return (
       <div className="ControlBar_repl pt-button-group">
-        {this.props.isRunning ? null : evalButton} {clearButton}
+        {this.props.isRunning ? null : evalButton} {clearButton} {toggleEditModeButton}
       </div>
-    )
+    );
   }
 
   private selectShareInputText() {
-    this.shareInputElem.focus()
-    this.shareInputElem.select()
+    this.shareInputElem.focus();
+    this.shareInputElem.select();
   }
 
   private hasNextButton() {
     return (
       this.props.questionProgress && this.props.questionProgress[0] < this.props.questionProgress[1]
-    )
+    );
   }
 
   private hasPreviousButton() {
-    return this.props.questionProgress && this.props.questionProgress[0] > 0
+    return this.props.questionProgress && this.props.questionProgress[0] > 1;
   }
 
   private hasReturnButton() {
     return (
       this.props.questionProgress &&
       this.props.questionProgress[0] === this.props.questionProgress[1]
-    )
+    );
   }
 }
 
 function styliseChapter(chap: number) {
-  return `Source \xa7${chap}`
+  return `Source \xa7${chap}`;
 }
 
-const chapters = sourceChapters.map(chap => ({ displayName: styliseChapter(chap), chapter: chap }))
+const chapters = sourceChapters.map(chap => ({ displayName: styliseChapter(chap), chapter: chap }));
 
 const chapterSelect = (
   currentChap: number,
@@ -224,19 +263,19 @@ const chapterSelect = (
       rightIcon="double-caret-vertical"
     />
   </ChapterSelectComponent>
-)
+);
 
-const ChapterSelectComponent = Select.ofType<IChapter>()
+const ChapterSelectComponent = Select.ofType<IChapter>();
 
 const chapterRenderer: ItemRenderer<IChapter> = (chap, { handleClick, modifiers, query }) => (
   <MenuItem active={false} key={chap.chapter} onClick={handleClick} text={chap.displayName} />
-)
+);
 
 const iExternals = Array.from(externalLibraries.entries()).map((entry, index) => ({
   name: entry[0] as ExternalLibraryName,
   key: index,
   symbols: entry[1]
-}))
+}));
 
 const externalSelect = (
   currentExternal: string,
@@ -251,12 +290,12 @@ const externalSelect = (
   >
     <Button className="pt-minimal" text={currentExternal} rightIcon="double-caret-vertical" />
   </ExternalSelectComponent>
-)
+);
 
-const ExternalSelectComponent = Select.ofType<IExternal>()
+const ExternalSelectComponent = Select.ofType<IExternal>();
 
 const externalRenderer: ItemRenderer<IExternal> = (external, { handleClick, modifiers, query }) => (
   <MenuItem active={false} key={external.key} onClick={handleClick} text={external.name} />
-)
+);
 
-export default ControlBar
+export default ControlBar;
